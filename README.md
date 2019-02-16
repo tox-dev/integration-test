@@ -1,1 +1,2 @@
-Daily integration tests for popular tox packages.
+Daily integration tests for popular tox plugins against
+master.

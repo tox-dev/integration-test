@@ -1,6 +1,8 @@
 import shutil
+import socket
 import subprocess
 import sys
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -12,6 +14,8 @@ ROOT = HERE.parent
 
 WHEELS = ROOT / "wheels"
 WHEELS.mkdir(exist_ok=True)
+
+DEVPI = ROOT / "devpi"
 
 
 @pytest.fixture(scope="session")
@@ -37,3 +41,26 @@ def build_wheel(folder: Path, name: str):
     output = list(wheel_at.iterdir())
     assert len(output) == 1
     return output[0]
+
+
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+
+
+@pytest.fixture(scope="session")
+def devpi(tox_wheel):
+    if DEVPI.exists():
+        shutil.rmtree(DEVPI)
+    DEVPI.mkdir(exist_ok=True)
+    port = find_free_port()
+
+    devpi_cmd = Path(sys.executable) / "devpi-server"
+    devpi = Path(sys.executable) / "devpi"
+
+    subprocess.check_call([devpi_cmd, "--start", "--init", "--serverdir", str(DEVPI), "--port", str(port)], cwd=DEVPI)
+    try:
+        yield
+    finally:
+        subprocess.check_call([devpi_cmd, "--stop", "--serverdir", str(DEVPI), "--port", str(port)], cwd=DEVPI)

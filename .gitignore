@@ -2,4 +2,6 @@
 .tox
 upstream
 wheels
+devpi
 .pytest_cache
+__pycache__
