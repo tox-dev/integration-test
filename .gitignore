@@ -1,0 +1,5 @@
+.idea
+.tox
+upstream
+wheels
+.pytest_cache
