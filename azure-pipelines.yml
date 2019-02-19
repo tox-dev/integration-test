@@ -1,0 +1,38 @@
+name: $(BuildDefinitionName)_$(Date:yyyyMMdd)$(Rev:.rr)
+
+variables:
+  "System.PreferGit": true
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+    - refs/tags/*
+
+- job: check_lint
+  pool: {vmImage: 'Ubuntu 16.04'}
+
+  - task: UsePythonVersion@0
+    displayName: setup python
+    inputs:
+      versionSpec: 3.7
+
+  - script: "python3.7 -m pip install -U pip>=19.0.1 'tox>=3.7.0, <4'"
+    displayName: install tox and pip
+
+  - script: "python3.7 -m tox -e fix_lint"
+    displayName: check lint
+
+- job: run_test
+  pool: {vmImage: 'Ubuntu 16.04'}
+
+  - task: UsePythonVersion@0
+    displayName: setup python
+    inputs:
+      versionSpec: 3.7
+  - script: "python3.7 -m pip install -U pip>=19.0.1 'tox>=3.7.0, <4'"
+    displayName: install tox and pip
+
+  - script: "python3.7 -m tox -e py37"
+    displayName: run tests
