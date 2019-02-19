@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from git import Repo, Git
+from git import Git, Repo
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE
