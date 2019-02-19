@@ -1,11 +1,13 @@
+import os
 import shutil
 import socket
 import subprocess
 import sys
-from contextlib import closing
+from contextlib import closing, contextmanager
 from pathlib import Path
 
 import pytest
+import semver
 
 from util import get_repo
 
@@ -14,8 +16,6 @@ ROOT = HERE.parent
 
 WHEELS = ROOT / "wheels"
 WHEELS.mkdir(exist_ok=True)
-
-DEVPI = ROOT / "devpi"
 
 
 @pytest.fixture(scope="session")
@@ -27,7 +27,26 @@ def git_tox():
 
 @pytest.fixture(scope="session")
 def tox_wheel(git_tox):
-    wheel = build_wheel(git_tox.working_tree_dir, "tox")
+    try:
+        max_version = None
+        for tags in git_tox.tags:
+            try:
+                version = semver.parse_version_info(tags.name)
+                if max_version is None:
+                    max_version = version
+                else:
+                    max_version = max(version, max_version)
+            except ValueError:
+                continue
+        assert max_version is not None
+        new_version = semver.bump_minor(str(max_version))
+        git_tox.create_tag(new_version)
+        try:
+            wheel = build_wheel(git_tox.working_tree_dir, "tox")
+        finally:
+            git_tox.delete_tag(new_version)
+    finally:
+        pass
     return wheel
 
 
@@ -51,16 +70,48 @@ def find_free_port():
 
 @pytest.fixture(scope="session")
 def devpi(tox_wheel):
-    if DEVPI.exists():
-        shutil.rmtree(DEVPI)
-    DEVPI.mkdir(exist_ok=True)
+    devpi_path = ROOT / "devpi"
+    if devpi_path.exists():
+        shutil.rmtree(devpi_path)
+    devpi_path.mkdir(exist_ok=True)
+
+    with with_server(devpi_path) as url:
+        devpi = Path(sys.executable).parent / "devpi"
+        devpi_client_at = devpi_path / "client"
+        devpi_client_at.mkdir(exist_ok=True)
+        generic_args = ["--clientdir", ".", "-v", "-v"]
+
+        user_name = "lancelot"
+        password = "whatever"
+        index = "dev"
+        commands = [
+            [devpi, "use"] + generic_args + [url],
+            [devpi, "user"] + generic_args + ["-c", user_name, f"password={password}"],
+            [devpi, "login"] + generic_args + [user_name, f"--password={password}"],
+            [devpi, "index"] + generic_args + ["-c", index, "bases=root/pypi"],
+            [devpi, "index"] + generic_args + ["-l"],
+            [devpi, "use"] + generic_args + [f"{user_name}/{index}"],
+        ]
+        for wheel in (tox_wheel,):
+            commands.append([devpi] + generic_args + ["upload", wheel])
+        for command in commands:
+            print(f'{devpi_client_at}$ {" ".join(str(i) for i in command)}')
+            subprocess.check_call(command, cwd=devpi_client_at, universal_newlines=True)
+        yield f"{url}/{user_name}/{index}"
+
+
+@contextmanager
+def with_server(devpi_path):
+    devpi_server_at = devpi_path / "server"
+    devpi_server_at.mkdir(exist_ok=True)
+
     port = find_free_port()
+    devpi_server = Path(sys.executable).parent / "devpi-server"
 
-    devpi_cmd = Path(sys.executable) / "devpi-server"
-    devpi = Path(sys.executable) / "devpi"
+    general = ["--serverdir", str(devpi_server_at), "--port", str(port)]
 
-    subprocess.check_call([devpi_cmd, "--start", "--init", "--serverdir", str(DEVPI), "--port", str(port)], cwd=DEVPI)
+    subprocess.check_call([devpi_server, "--start", "--init"] + general, cwd=devpi_server_at, universal_newlines=True)
     try:
-        yield
+        yield f"http://localhost:{port}"
     finally:
-        subprocess.check_call([devpi_cmd, "--stop", "--serverdir", str(DEVPI), "--port", str(port)], cwd=DEVPI)
+        subprocess.check_call([devpi_server, "--stop"] + general, cwd=devpi_server_at, universal_newlines=True)

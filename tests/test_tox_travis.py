@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 
@@ -12,5 +13,7 @@ def repo():
     return get_repo(name="tox-travis", url="https://github.com/tox-dev/tox-travis.git")
 
 
-def test_travis_tox_call(repo, devpi):
-    subprocess.check_call([sys.executable, "-m", "tox", "-vv", "-e", "py37"], cwd=repo.working_tree_dir)
+def test_travis(repo, devpi):
+    env = os.environ.copy()
+    env["PIP_INDEX_URL"] = devpi
+    subprocess.check_call([sys.executable, "-m", "tox", "-vv", "-r", "-e", "py37"], cwd=repo.working_tree_dir, env=env)
