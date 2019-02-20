@@ -1,3 +1,4 @@
+import os
 import shutil
 import socket
 import subprocess
@@ -20,7 +21,9 @@ WHEELS.mkdir(exist_ok=True)
 @pytest.fixture(scope="session")
 def git_tox():
     # noinspection PyBroadException
-    tox = get_repo(name="tox", url="https://github.com/tox-dev/tox.git")
+    tox = get_repo(
+        name="tox", url="https://github.com/tox-dev/tox.git", branch=os.environ.get("TEST_AGAINST_BRANCH", "master")
+    )
     return tox
 
 
