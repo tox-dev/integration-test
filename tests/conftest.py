@@ -54,7 +54,7 @@ def tox_wheel(git_tox):
 
 def build_wheel(folder: Path, name: str):
     wheel_at = WHEELS / name
-    shutil.rmtree(wheel_at)
+    shutil.rmtree(wheel_at, ignore_errors=True)
     wheel_at.mkdir()
     subprocess.check_call(
         [sys.executable, "-m", "pip", "wheel", "--no-deps", "-w", str(wheel_at), "."], cwd=str(folder)
@@ -73,8 +73,7 @@ def find_free_port():
 @pytest.fixture(scope="session")
 def devpi(tox_wheel):
     devpi_path = ROOT / "devpi"
-    if devpi_path.exists():
-        shutil.rmtree(devpi_path)
+    shutil.rmtree(devpi_path, ignore_errors=True)
     devpi_path.mkdir(exist_ok=True)
 
     with with_server(devpi_path) as url:
