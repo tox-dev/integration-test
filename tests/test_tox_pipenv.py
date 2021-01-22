@@ -16,7 +16,7 @@ def repo():
 def test_pipenv(repo, devpi):
     env = os.environ.copy()
     env["PIP_INDEX_URL"] = devpi
-    subprocess.check_call([sys.executable, "-m", "tox", "-vv", "-r", "-e", "py37"], cwd=repo.working_tree_dir, env=env)
+    subprocess.check_call([sys.executable, "-m", "tox", "-vv", "-r", "-e", "py39"], cwd=repo.working_tree_dir, env=env)
 
 
 #
