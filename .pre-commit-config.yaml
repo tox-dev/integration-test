@@ -11,7 +11,7 @@ repos:
       - id: seed-isort-config
         args: [ --application-directories, "." ]
   - repo: https://github.com/PyCQA/isort
-    rev: 5.7.0
+    rev: 5.8.0
     hooks:
       - id: isort
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -22,11 +22,11 @@ repos:
       - id: check-yaml
       - id: debug-statements
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.7.4
+    rev: v2.11.0
     hooks:
       - id: pyupgrade
   - repo: https://github.com/PyCQA/flake8
-    rev: 3.8.4
+    rev: 3.9.0
     hooks:
       - id: flake8
         additional_dependencies:
